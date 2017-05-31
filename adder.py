@@ -2,33 +2,6 @@ import pymysql
 import time
 import sys
 
-
-def get_mysql_connection(db_info):
-    result = pymysql.connect(host=db_info.get('host'), port=3306, user='zapple',
-                           passwd=db_info.get('pw'), db='ads', charset='utf8')
-    print('connected database to {}'.format(db_info.get('host')))
-    return result
-
-
-def quite_close(conn):
-    if conn is None:
-        return
-    try:
-        conn.close()
-        print('DB connection closed')
-    except pymysql.err.Error as mysqlErr:
-        print(mysqlErr)
-
-f = open('schedule_list.txt', 'r', encoding='utf-8')
-
-campaign_id = None
-creative_id = None
-so_code = None
-campaign_name = None
-
-db_conn = None
-cursor = None
-
 master1 = {'host': '211.115.112.13',
            'pw': 'zapple2012'}
 master2 = {'host': '211.115.112.14',
@@ -39,8 +12,97 @@ so_db_info_dict = {'1': master2,
                    '7': master1,
                    '19': master1}
 
+
+def connect_to_database(db_info):
+    result = pymysql.connect(host=db_info.get('host'), port=3306, user='zapple',
+                           passwd=db_info.get('pw'), db='ads', charset='utf8')
+    print('connected database to {}'.format(db_info.get('host')))
+    return result
+
+
+def quite_db_close(conn):
+    if conn is None:
+        return
+    try:
+        conn.close()
+        print('DB connection close\n')
+    except pymysql.err.Error as mysqlErr:
+        print('{}\n'.format(mysqlErr))
+
+
+def parse_line_to_campaign_info(campaign_info_line):
+    tokens = campaign_info_line.split('|')
+    _so_code = tokens[0]
+    _campaign_id = tokens[1]
+    _creative_id = tokens[2]
+    return _so_code, _campaign_id, _creative_id
+
+
+def parse_line_to_schedule_info(schedule_info_line):
+    tokens = schedule_info_line.split('|')
+    _group_id = tokens[0]
+    _start_date = tokens[1]
+    _end_date = tokens[2]
+    _start_time = tokens[3]
+    _end_time = tokens[4]
+    return _group_id, _start_date, _end_date, _start_time, _end_time
+
+
+def get_campaign_name(conn, inputs):
+    query = 'select name from tbl_campaign where id = %s and main_operator_id = %s'
+    cursor = conn.cursor()
+    cursor.execute(query, inputs)
+    result = cursor.fetchall()[0][0]
+    cursor.close()
+    return result
+
+
+def get_group_name(conn, grp_id):
+    query = 'select group_name from tbl_group where id = %s'
+    cursor = conn.cursor()
+    cursor.execute(query, grp_id)
+    result = cursor.fetchall()[0][0]
+    cursor.close()
+    return result
+
+
+def insert_schedule(conn, so_code, schedule_name, creative_id, start_date, end_date, start_time,
+                    end_time, group_id, campaign_id):
+    now = time.strftime("%Y-%m-%d %H:%M:%S")
+    insert_schedule_query = '''
+    insert into tbl_schedule
+    (main_operator_id, created, schedule_name, content_id, default_flag,
+    user_id, start_date, end_date, group_id, priority_flag,
+    campaign_id)
+    values (%s, %s, %s, %s, '0', '2', %s, %s, %s, 3, %s)
+    '''
+
+    cursor = conn.cursor()
+    cursor.execute(insert_schedule_query, (so_code, now, schedule_name, creative_id,
+                                           start_date, end_date, group_id, campaign_id))
+
+    # TODO: 쿼리변경
+    cursor.execute('SELECT LAST_INSERT_ID()')
+    last_id = cursor.fetchall()[0][0]
+
+    insert_time_query = '''
+    INSERT INTO tbl_time (start_hour, end_hour, schedule_id, status)
+    VALUES (%s, %s, %s, null)
+    '''
+
+    cursor.execute(insert_time_query, (start_time, end_time, last_id))
+    db_conn.commit()
+    cursor.close()
+
+db_conn = None
 line = None
+f = open('schedule_list.txt', 'r', encoding='utf-8')
 try:
+    campaign_id = None
+    creative_id = None
+    so_code = None
+    campaign_name = None
+
     while True:
         line_ = f.readline()
         if not line_:
@@ -51,58 +113,23 @@ try:
         if not line or line.startswith('#'):
             print('Line skip: {}'.format(line))
         elif line.startswith('='):
-            info = line[1:].split('|')
-            so_code = info[0]
-            campaign_id = info[1]
-            creative_id = info[2]
+            so_code, campaign_id, creative_id = parse_line_to_campaign_info(line[1:])
 
-            quite_close(db_conn)
-            db_conn = get_mysql_connection(so_db_info_dict.get(so_code))
-            cursor = db_conn.cursor()
-
-            campaign_query = 'select * from tbl_campaign where id = %s and main_operator_id = %s'
-            cursor.execute(campaign_query, (campaign_id, so_code))
-            campaign_name = cursor.fetchall()[0][3]
+            quite_db_close(db_conn)
+            db_conn = connect_to_database(so_db_info_dict.get(so_code))
+            campaign_name = get_campaign_name(db_conn, (campaign_id, so_code))
 
             print('캠페인 정보')
             print('SO CODE: {}, CAMPAIGN_NAME: {}, CREATIVE_ID: {}'.format(so_code, campaign_name, creative_id))
         else:
-            info = line.split('|')
-            group_id = info[0]
-            start_date = info[1]
-            end_date = info[2]
-            start_time = info[3]
-            end_time = info[4]
-
-            group_query = 'select group_name from tbl_group where id = %s'
-            cursor.execute(group_query, group_id)
-            group_name = cursor.fetchall()[0][0]
-
-            now = time.strftime("%Y-%m-%d %H:%M:%S")
+            group_id, start_date, end_date, start_time, end_time = parse_line_to_schedule_info(line)
+            group_name = get_group_name(db_conn, group_id)
             schedule_name = '{} {} {}~{} {}-{}' \
                 .format(group_name, campaign_name, start_date, end_date, start_time, end_time)
 
-            insert_schedule_query = '''
-            insert into tbl_schedule
-            (main_operator_id, created, schedule_name, content_id, default_flag,
-            user_id, start_date, end_date, group_id, priority_flag,
-            campaign_id)
-            values (%s, %s, %s, %s, '0', '2', %s, %s, %s, 3, %s)
-            '''
-            cursor.execute(insert_schedule_query, (so_code, now, schedule_name, creative_id,
-                                                   start_date, end_date, group_id, campaign_id))
-
-            # TODO: 쿼리변경
-            cursor.execute('SELECT LAST_INSERT_ID()')
-            last_id = cursor.fetchall()[0][0]
-
-            insert_time_query = '''
-            INSERT INTO tbl_time (start_hour, end_hour, schedule_id, status)
-            VALUES (%s, %s, %s, null)
-            '''
-
-            cursor.execute(insert_time_query, (start_time, end_time, last_id))
-            db_conn.commit()
+            insert_schedule(db_conn, so_code=so_code, schedule_name=schedule_name, creative_id=creative_id,
+                            start_date=start_date, end_date=end_date, start_time=start_time, end_time=end_time,
+                            group_id=group_id, campaign_id=campaign_id)
 
             print('{} - 입력 성공!'.format(schedule_name))
 except IndexError as e:
@@ -111,4 +138,4 @@ except IndexError as e:
     print('Message: {}'.format(e), file=sys.stderr)
 finally:
     f.close()
-    quite_close(db_conn)
+    quite_db_close(db_conn)
