@@ -66,6 +66,7 @@ def get_group_name(conn, grp_id):
     return result
 
 
+# TODO: modulation
 def insert_schedule(conn, so_code, schedule_name, creative_id, start_date, end_date, start_time,
                     end_time, group_id, campaign_id):
     now = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -115,7 +116,9 @@ try:
         elif line.startswith('='):
             so_code, campaign_id, creative_id = parse_line_to_campaign_info(line[1:])
 
+            # TODO: 이미 접속되어있으면 재접속하지 않도록.
             quite_db_close(db_conn)
+            # TODO: Be immutable??
             db_conn = connect_to_database(so_db_info_dict.get(so_code))
             campaign_name = get_campaign_name(db_conn, (campaign_id, so_code))
 
