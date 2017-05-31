@@ -25,7 +25,7 @@ def quite_db_close(conn):
         return
     try:
         conn.close()
-        print('DB connection close\n')
+        print('DB connection closed.\n')
     except pymysql.err.Error as mysqlErr:
         print('{}\n'.format(mysqlErr))
 
@@ -130,6 +130,7 @@ try:
             schedule_name = '{} {} {}~{} {}-{}' \
                 .format(group_name, campaign_name, start_date, end_date, start_time, end_time)
 
+            # TODO: date validation
             insert_schedule(db_conn, so_code=so_code, schedule_name=schedule_name, creative_id=creative_id,
                             start_date=start_date, end_date=end_date, start_time=start_time, end_time=end_time,
                             group_id=group_id, campaign_id=campaign_id)
