@@ -31,7 +31,7 @@ def quite_db_close(conn):
 
 
 def parse_line_to_campaign_info(campaign_info_line):
-    tokens = campaign_info_line.split('|')
+    tokens = campaign_info_line.split(',')
     _so_code = tokens[0]
     _campaign_id = tokens[1]
     _creative_id = tokens[2]
@@ -39,7 +39,7 @@ def parse_line_to_campaign_info(campaign_info_line):
 
 
 def parse_line_to_schedule_info(schedule_info_line):
-    tokens = schedule_info_line.split('|')
+    tokens = schedule_info_line.split(',')
     _group_id = tokens[0]
     _start_date = tokens[1]
     _end_date = tokens[2]
