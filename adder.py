@@ -3,19 +3,25 @@ import time
 import sys
 
 master1 = {'host': '211.115.112.13',
+           'db': 'ads',
            'pw': 'zapple2012'}
-master2 = {'host': '211.115.112.14',
+cjhv = {'host': '211.115.112.14',
+           'db': 'ads_cjhv',
            'pw': 'zapple2016'}
-so_db_info_dict = {'1': master2,
-                   '2': master1,
+master3 = {'host': '211.115.112.10',
+           'db': 'ads',
+           'pw': 'zapp1030'}
+
+so_db_info_dict = {'1': cjhv,
+                   '2': master3,
                    '6': master1,
                    '7': master1,
-                   '19': master1}
+                   '19': master3}
 
 
 def connect_to_database(db_info):
     result = pymysql.connect(host=db_info.get('host'), port=3306, user='zapple',
-                           passwd=db_info.get('pw'), db='ads', charset='utf8')
+                           passwd=db_info.get('pw'), db=db_info.get('db'), charset='utf8')
     print('connected database to {}'.format(db_info.get('host')))
     return result
 
