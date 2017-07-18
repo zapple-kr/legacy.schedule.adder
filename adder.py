@@ -81,7 +81,7 @@ def insert_schedule(conn, so_code, schedule_name, creative_id, start_date, end_d
     (main_operator_id, created, schedule_name, content_id, default_flag,
     user_id, start_date, end_date, group_id, priority_flag,
     campaign_id)
-    values (%s, %s, %s, %s, '0', '2', %s, %s, %s, 1 %s)
+    values (%s, %s, %s, %s, '0', '2', %s, %s, %s, 1, %s)
     '''
 
     cursor = conn.cursor()
