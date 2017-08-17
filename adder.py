@@ -5,17 +5,23 @@ import sys
 master1 = {'host': '211.115.112.13',
            'db': 'ads',
            'pw': 'zapple2012'}
+hcn = {'host': '211.115.112.14',
+           'db': 'ads',
+           'pw': 'zapple2016'}
 cjhv = {'host': '211.115.112.14',
            'db': 'ads_cjhv',
            'pw': 'zapple2016'}
 master3 = {'host': '211.115.112.10',
            'db': 'ads',
            'pw': 'zapp1030'}
+tbroad = {'host': '211.115.112.11',
+           'db': 'ads',
+           'pw': 'zapp1030'}
 
 so_db_info_dict = {'1': cjhv,
                    '2': master3,
-                   '6': master1,
-                   '7': master1,
+                   '6': tbroad,
+                   '7': hcn,
                    '19': master3}
 
 
